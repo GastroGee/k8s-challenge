@@ -3,10 +3,10 @@ kind: Secret
 metadata:
   name: wp-blog-db-pass
   namespace: company-blog
+  labels:
+    app: wp-blog
 type: Opaque
 data:
-  # we typically load these from AWS SecretsManager, this is
-  # hard-coded to avoid any unexpected errors
   password: Y29kZWNoYWxsZW5nZQ==
 ---
 apiVersion: v1
@@ -24,6 +24,24 @@ spec:
     tier: mysql
   clusterIP: None
 ---
+# Adding a Persistent Volume to be used by the PVC 
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv
+  namespace: company-blog
+  labels:
+    app: wp-blog
+spec:
+  storageClassName: ""
+  capacity:
+    storage: 30Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/tmp/hostpath-provisioner"
+---
+# Updated with a storageClassName to match the Persistent Volume 
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -32,16 +50,19 @@ metadata:
   labels:
     app: wp-blog
 spec:
+  storageClassName: ""
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 20Gi
+      storage: 30Gi
 ---
+# Updated Deployment tags to match the rest of the resources above; also updated the namespace
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: wordpress-mysql
+  namespace: company-blog
   labels:
     app: wp-blog
 spec:
